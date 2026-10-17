@@ -1,6 +1,6 @@
 # FX boundary guidance
 
-Follow [the protocol](../CHANGE_PROTOCOL.md). Inspect `src/fx/exchange-rate.ts`, its application caller and `test/fx-resilience.test.ts`.
+Follow [the protocol](../CHANGE_PROTOCOL.md). Inspect `src/application/ports.ts` (the FX port), `src/fx/exchange-rate.ts` (implementations), its application caller and `test/fx-resilience.test.ts`.
 
 Check cancellation through headers and body, bounded attempts, retryable versus unsupported errors, jitter, single half-open probe, recovery and exact rate-token/pair provenance. The breaker is process-local. FX failure must leave account state untouched, including expired holds. Use deterministic timing or local HTTP fixtures; do not depend on live provider availability.
 

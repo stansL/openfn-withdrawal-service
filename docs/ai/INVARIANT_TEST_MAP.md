@@ -31,3 +31,9 @@ Cleanup retains its existing scope across expired accounts, but now only commits
 ## Dependency and timing boundaries
 
 `withdrawal-api.test.ts`: “slow FX does not consume authorisation TTL and cleanup uses the post-FX time” advances the injected clock beyond the TTL during FX, checks persisted post-FX creation/expiry, cleanup of an old hold and unchanged replay timestamps. `fx-resilience.test.ts` exercises Frankfurter against a local HTTP server: exact numeric-token preservation, pair paths, transient retry, non-retryable errors, malformed JSON/pair provenance, cancellation before headers and during a stalled body, and successful half-open recovery with only one probe. These are local HTTP contract tests, not a live Frankfurter availability check.
+
+## Boundary refactor evidence
+
+Response serialization now lives in `src/http/withdrawal-response.ts`. Domain failures retain stable codes/messages, with status and headers owned by `src/http/errors.ts`; API tests cover FX 422/503 translation, retry headers and rejection of spoofed failure objects. Existing contract tests continue to compare the public success fields with OpenAPI.
+
+Explicit fixtures moved to `src/db/demo-seed.ts`; seed tests verify the existing access matrix, fresh-start absence of credentials and reseeding without restoring revoked tokens, grants or account balances. Schema initialization moved to `src/db/schema.ts`; the legacy-schema rejection test preserves fail-fast compatibility semantics. Database reservation operations and SQL remain unchanged. FX implementations and test doubles now consume the application-owned port.

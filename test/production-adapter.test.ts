@@ -1,3 +1,4 @@
+import { seedDemoData } from '../src/db/demo-seed.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -41,7 +42,7 @@ test('production better-sqlite3 adapter enforces reservation and idempotency inv
   const path = join(dir, 'service.sqlite');
   const db = new AppDatabase(path, createBetterSqliteDriver);
   try {
-    db.seedDemoData();
+    seedDemoData(db.db);
     const first = db.commitAuthorisation(record());
     assert.equal(first.replayed, false);
     assert.equal(db.getBalance('acc_1001'), 100_000);

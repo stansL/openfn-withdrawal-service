@@ -7,12 +7,16 @@
 | Boundary | Source | Responsibility |
 |---|---|---|
 | Composition and lifecycle | `src/server.ts` | Construct adapters, readiness and shutdown |
-| HTTP | `src/http/app.ts`, `routes.ts`, `contracts.ts` | Authenticate, validate, dispatch, serialize errors and generate OpenAPI |
+| HTTP | `src/http/app.ts`, `routes.ts`, `contracts.ts`, `errors.ts`, `withdrawal-response.ts` | Authenticate, validate, dispatch, map responses/failures to HTTP and generate OpenAPI |
 | Identity | `src/auth/auth-service.ts` | Resolve bearer token to principal through AuthenticationStore |
-| Application | `src/application/withdrawal-service.ts`, `ports.ts` | Coordinate access projection, replay, FX, conversion and commit |
+| Application | `src/application/withdrawal-service.ts`, `ports.ts` | Own dependency ports; coordinate access projection, replay, FX, conversion and commit |
 | Money | `src/domain/money.ts` | Integer cents, exact decimal conversion and rounding |
+| Schema and fixtures | `src/db/schema.ts`, `demo-seed.ts`, `src/seed.ts` | Initialize compatible schema; explicitly provision demo data outside normal startup |
+| Driver contracts | `src/db/sql-driver.ts` | Minimal driver interface shared by production/test adapters |
 | Persistent state | `src/db/database.ts` | Own accounts, grants, holds, authorisations and durable idempotency |
 | External dependency | `src/fx/exchange-rate.ts` | Quote provenance, HTTP, timeout, retry and circuit breaker |
+
+Domain errors in `src/domain/errors.ts` carry codes/messages without HTTP status or headers. HTTP owns translation; the application does not serialize API responses. Token hashing is shared by authentication lookup and explicit fixtures through `src/auth/token-hash.ts`.
 
 Paths above are relative to the repository root. Trace direct callers before changing an interface.
 

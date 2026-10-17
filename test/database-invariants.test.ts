@@ -1,3 +1,4 @@
+import { seedDemoData } from '../src/db/demo-seed.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AppDatabase } from '../src/db/database.js';
@@ -26,7 +27,7 @@ function record(overrides: Partial<WithdrawalRecord> = {}): WithdrawalRecord {
 
 test('rolls back the reservation if the withdrawal audit record cannot be persisted', () => {
   const db = new AppDatabase(':memory:', createNodeSqliteTestDriver);
-  db.seedDemoData();
+  seedDemoData(db.db);
   try {
     db.commitAuthorisation(record());
     assert.equal(db.getBalance('acc_1001'), 100_000);
@@ -49,7 +50,7 @@ test('rolls back the reservation if the withdrawal audit record cannot be persis
 
 test('availability projects expired funds without writes and failed persistence rolls cleanup back', () => {
   const db = new AppDatabase(':memory:', createNodeSqliteTestDriver);
-  db.seedDemoData();
+  seedDemoData(db.db);
   try {
     db.commitAuthorisation(record({ amountUsdCents: 90_000 }));
     db.commitAuthorisation(record({
@@ -81,4 +82,15 @@ test('availability projects expired funds without writes and failed persistence 
     assert.equal((db.db.prepare('SELECT reservation_released_at FROM withdrawals WHERE id = ?').get(record().id) as { reservation_released_at: string | null }).reservation_released_at, now);
     assert.equal(db.getAccessibleAvailableBalance('user_alice', 'acc_1001', now), 5_000, 'released holds must not be discounted twice');
   } finally { db.close(); }
+});
+
+
+test('schema initialization still rejects the incompatible pre-reservation account schema', () => {
+  const driver = createNodeSqliteTestDriver(':memory:');
+  driver.exec(`CREATE TABLE accounts (
+    id TEXT PRIMARY KEY, balance_usd_cents INTEGER NOT NULL, created_at TEXT NOT NULL
+  )`);
+  try {
+    assert.throws(() => new AppDatabase(':memory:', () => driver), /Incompatible exercise database schema/);
+  } finally { driver.close(); }
 });

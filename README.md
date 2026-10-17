@@ -91,7 +91,7 @@ flowchart TB
     class authPort,storePort,fxPort port;
 ```
 
-The application uses narrow ports for identity/account state and the external FX dependency.
+The application owns narrow ports for identity/account state and FX. HTTP response mapping and status/header translation stay in `http/`. Schema initialization and explicit demo fixtures are separate from the database operations; the reservation transaction remains together.
 
 ## Core workflow
 

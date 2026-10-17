@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import type { SqlDatabase, SqlDriverFactory, SqlParameter } from '../../src/db/database.js';
+import type { SqlDatabase, SqlDriverFactory, SqlParameter } from '../../src/db/sql-driver.js';
 
 export const createNodeSqliteTestDriver: SqlDriverFactory = (path) => {
   const db = new DatabaseSync(path);

@@ -2,7 +2,7 @@ import { createServer, type ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import type { AuthService } from '../auth/auth-service.js';
 import type { WithdrawalService } from '../application/withdrawal-service.js';
-import { AppError, MethodNotAllowedError } from '../domain/errors.js';
+import { MethodNotAllowedError, toHttpError } from './errors.js';
 import { noopLogger, type Logger } from '../observability/logger.js';
 import { buildOpenApiDocument } from './contracts.js';
 import { createRoutes, header, type ReadinessStatus } from './routes.js';
@@ -60,17 +60,16 @@ export function createHttpServer(deps: AppDependencies) {
         sendJson: (status, payload) => json(res, status, payload),
       });
     } catch (error) {
-      if (error instanceof AppError) {
-        if (error instanceof MethodNotAllowedError) res.setHeader('Allow', error.allowedMethods.join(', '));
-        if (error.status === 413) {
+      const httpError = toHttpError(error);
+      if (httpError) {
+        for (const [name, value] of Object.entries(httpError.headers)) res.setHeader(name, value);
+        if (httpError.status === 413) {
           // Finish the structured response, then close rather than retain an oversized upload.
           res.setHeader('Connection', 'close');
           req.resume();
         }
-        if (error.status === 401) res.setHeader('WWW-Authenticate', 'Bearer');
-        if (error.retryable) res.setHeader('Retry-After', '2');
-        logger.info({ event: 'request_rejected', requestId, code: error.code, status: error.status });
-        return json(res, error.status, errorPayload(error.code, error.message, requestId));
+        logger.info({ event: 'request_rejected', requestId, code: httpError.code, status: httpError.status });
+        return json(res, httpError.status, errorPayload(httpError.code, httpError.message, requestId));
       }
 
       logger.error({ event: 'unhandled_error', requestId, error: error instanceof Error ? error.message : String(error) });

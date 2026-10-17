@@ -1,27 +1,11 @@
-import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { WithdrawalRecord } from '../domain/types.js';
 import type { AuthenticationStore, WithdrawalStore } from '../application/ports.js';
+import { initializeSchema } from './schema.js';
+import { hashToken } from '../auth/token-hash.js';
+import type { SqlDatabase, SqlDriverFactory } from './sql-driver.js';
 import { AccountNotFoundError, IdempotencyConflictError, InsufficientFundsError } from '../domain/errors.js';
-
-export type SqlParameter = string | number | bigint | null;
-
-export interface SqlRunResult { changes: number }
-export interface SqlStatement {
-  run(...params: SqlParameter[]): SqlRunResult;
-  get(...params: SqlParameter[]): unknown;
-}
-export interface SqlDatabase {
-  exec(sql: string): void;
-  prepare(sql: string): SqlStatement;
-  close(): void;
-}
-export type SqlDriverFactory = (path: string) => SqlDatabase;
-
-export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
 
 export class AppDatabase implements AuthenticationStore, WithdrawalStore {
   readonly db: SqlDatabase;
@@ -32,122 +16,7 @@ export class AppDatabase implements AuthenticationStore, WithdrawalStore {
     this.db.exec('PRAGMA foreign_keys = ON;');
     this.db.exec('PRAGMA busy_timeout = 5000;');
     if (path !== ':memory:') this.db.exec('PRAGMA journal_mode = WAL;');
-    this.migrate();
-  }
-
-  migrate(): void {
-    this.db.exec(`
-      CREATE TABLE IF NOT EXISTS accounts (
-        id TEXT PRIMARY KEY,
-        balance_usd_cents INTEGER NOT NULL CHECK (balance_usd_cents >= 0),
-        reserved_usd_cents INTEGER NOT NULL DEFAULT 0 CHECK (reserved_usd_cents >= 0),
-        created_at TEXT NOT NULL,
-        CHECK (reserved_usd_cents <= balance_usd_cents)
-      );
-
-      CREATE TABLE IF NOT EXISTS api_tokens (
-        token_hash TEXT PRIMARY KEY,
-        subject_id TEXT NOT NULL,
-        revoked_at TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS account_permissions (
-        subject_id TEXT NOT NULL,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        can_withdraw INTEGER NOT NULL CHECK (can_withdraw IN (0,1)),
-        PRIMARY KEY (subject_id, account_id)
-      );
-
-      CREATE TABLE IF NOT EXISTS withdrawals (
-        id TEXT PRIMARY KEY,
-        account_id TEXT NOT NULL REFERENCES accounts(id),
-        subject_id TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status = 'authorised'),
-        authorisation_code TEXT NOT NULL UNIQUE,
-        amount_usd_cents INTEGER NOT NULL CHECK (amount_usd_cents > 0),
-        target_currency TEXT NOT NULL,
-        converted_amount TEXT NOT NULL,
-        exchange_rate TEXT NOT NULL,
-        fx_provider TEXT NOT NULL,
-        fx_effective_date TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        expires_at TEXT NOT NULL,
-        reservation_released_at TEXT,
-        idempotency_key TEXT,
-        request_hash TEXT
-      );
-
-      CREATE UNIQUE INDEX IF NOT EXISTS ux_withdrawal_idempotency
-      ON withdrawals(subject_id, idempotency_key)
-      WHERE idempotency_key IS NOT NULL;
-
-      CREATE INDEX IF NOT EXISTS ix_withdrawal_expiry
-      ON withdrawals(expires_at)
-      WHERE reservation_released_at IS NULL;
-    `);
-
-    // Fail loudly if a developer points this version at the earlier exercise schema.
-    // A real production service would use versioned migrations; for this take-home,
-    // silently guessing how to reinterpret already-debited balances as reservations
-    // would be less safe than requiring a fresh local exercise database.
-    const reservedColumn = this.db.prepare(`
-      SELECT 1 AS present FROM pragma_table_info('accounts') WHERE name = 'reserved_usd_cents'
-    `).get() as { present: number } | undefined;
-    const expiryColumn = this.db.prepare(`
-      SELECT 1 AS present FROM pragma_table_info('withdrawals') WHERE name = 'expires_at'
-    `).get() as { present: number } | undefined;
-    if (!reservedColumn || !expiryColumn) {
-      throw new Error('Incompatible exercise database schema. Use a fresh DATABASE_PATH for this version.');
-    }
-  }
-
-  /**
-   * Explicit development/test fixture provisioning. Normal server startup never
-   * creates accounts or credentials implicitly.
-   *
-   * Matrix:
-   * - Alice: multiple accounts (including a shared account)
-   * - Bob: exactly one account
-   * - Carol: authenticated principal with no account access
-   * - Dave: multiple accounts and shared ownership, exercising many-to-many grants
-   * - acc_unassigned: valid account with no user grants
-   * - demo-revoked-token: known but revoked credential
-   */
-  seedDemoData(): void {
-    const now = new Date().toISOString();
-    const insertAccount = this.db.prepare(`
-      INSERT OR IGNORE INTO accounts(id, balance_usd_cents, reserved_usd_cents, created_at)
-      VALUES (?, ?, 0, ?)
-    `);
-    for (const [id, cents] of [
-      ['acc_1001', 100_000],
-      ['acc_1002', 50_000],
-      ['acc_2001', 25_000],
-      ['acc_shared', 75_000],
-      ['acc_unassigned', 90_000],
-    ] as const) insertAccount.run(id, cents, now);
-
-    const insertToken = this.db.prepare(`
-      INSERT OR IGNORE INTO api_tokens(token_hash, subject_id, revoked_at) VALUES (?, ?, ?)
-    `);
-    insertToken.run(hashToken('demo-alice-token'), 'user_alice', null);
-    insertToken.run(hashToken('demo-bob-token'), 'user_bob', null);
-    insertToken.run(hashToken('demo-carol-token'), 'user_carol', null);
-    insertToken.run(hashToken('demo-dave-token'), 'user_dave', null);
-    insertToken.run(hashToken('demo-revoked-token'), 'user_revoked', now);
-
-    const grant = this.db.prepare(`
-      INSERT OR IGNORE INTO account_permissions(subject_id, account_id, can_withdraw)
-      VALUES (?, ?, 1)
-    `);
-    for (const [subject, account] of [
-      ['user_alice', 'acc_1001'],
-      ['user_alice', 'acc_1002'],
-      ['user_alice', 'acc_shared'],
-      ['user_bob', 'acc_2001'],
-      ['user_dave', 'acc_2001'],
-      ['user_dave', 'acc_shared'],
-    ] as const) grant.run(subject, account);
+    initializeSchema(this.db);
   }
 
   authenticateToken(token: string): string | null {

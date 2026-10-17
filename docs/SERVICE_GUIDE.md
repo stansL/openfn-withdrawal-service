@@ -24,6 +24,8 @@ SQLite via `better-sqlite3` gives the exercise real transactions, uniqueness con
 
 It is **not** my recommendation for a high-write production financial service. A production evolution would likely use PostgreSQL with versioned migrations, backup/restore, HA and operational tooling. The application flow should remain stable because persistence is behind `AuthenticationStore` / `WithdrawalStore` ports.
 
+`src/db/schema.ts` owns schema initialization and compatibility checks. `src/db/demo-seed.ts` owns explicit fixtures, invoked by `src/seed.ts`; normal startup does not import demo provisioning. Driver contracts live in `src/db/sql-driver.ts`. `AppDatabase` retains authentication lookups and the complete reservation transaction.
+
 Important invariants are enforced at the persistence boundary:
 
 - posted balance remains unchanged during authorisation;
@@ -90,6 +92,8 @@ USD account state uses integer cents. FX conversion uses exact decimal-string ar
 For this exercise, converted amounts use **half-up rounding to the target currency's ISO minor-unit precision**. That is a documented exercise policy, not an assertion that every production settlement domain should use half-up rounding. A real product's pricing/settlement policy would own this rule.
 
 ## API contract and documentation
+
+`src/http/withdrawal-response.ts` serializes domain records into the public response. Domain failures carry stable codes/messages; `src/http/errors.ts` owns their HTTP status/header translation and protocol-only errors. Unexpected failures retain sanitized 500 responses. Application-owned ports in `src/application/ports.ts` describe identity, withdrawal persistence and FX dependencies without importing concrete adapters.
 
 The HTTP route contracts are the source for both routing/validation metadata and OpenAPI generation. This avoids keeping a separate handwritten API document that can silently drift from runtime behavior.
 

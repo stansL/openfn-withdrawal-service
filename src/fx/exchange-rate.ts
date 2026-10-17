@@ -1,9 +1,6 @@
 import { FxPairUnsupportedError, FxUnavailableError } from '../domain/errors.js';
 import type { FxQuote } from '../domain/types.js';
-
-export interface ExchangeRateProvider {
-  getQuote(from: string, to: string): Promise<FxQuote>;
-}
+import type { ExchangeRateProvider } from '../application/ports.js';
 
 export interface RawFxClient {
   fetchRate(from: string, to: string, signal: AbortSignal): Promise<FxQuote>;

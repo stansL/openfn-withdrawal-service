@@ -1,5 +1,5 @@
 import BetterSqlite3 from 'better-sqlite3';
-import type { SqlDriverFactory } from './database.js';
+import type { SqlDriverFactory } from './sql-driver.js';
 
 /** Runtime adapter. Kept outside database.ts so unit tests can inject a test driver without loading native bindings. */
 export const createBetterSqliteDriver: SqlDriverFactory = (path) => {

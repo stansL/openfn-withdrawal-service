@@ -1,10 +1,11 @@
+import { seedDemoData } from '../src/db/demo-seed.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { AddressInfo } from 'node:net';
 import { AppDatabase } from '../src/db/database.js';
 import { AuthService } from '../src/auth/auth-service.js';
 import { WithdrawalService } from '../src/application/withdrawal-service.js';
-import type { ExchangeRateProvider } from '../src/fx/exchange-rate.js';
+import type { ExchangeRateProvider } from '../src/application/ports.js';
 import type { FxQuote } from '../src/domain/types.js';
 import { createHttpServer } from '../src/http/app.js';
 import { FxUnavailableError } from '../src/domain/errors.js';
@@ -35,7 +36,7 @@ async function withApp(
 ) {
   const fx = options.fx ?? new FakeFx();
   const db = new AppDatabase(':memory:', createNodeSqliteTestDriver);
-  db.seedDemoData();
+  seedDemoData(db.db);
   const server = createHttpServer({
     auth: new AuthService(db),
     withdrawals: new WithdrawalService(
@@ -135,7 +136,7 @@ test('revalidates authorisation at the reservation boundary', async () => {
   }
 
   const db = new AppDatabase(':memory:', createNodeSqliteTestDriver);
-  db.seedDemoData();
+  seedDemoData(db.db);
   const server = createHttpServer({
     auth: new AuthService(db),
     withdrawals: new WithdrawalService(db, new RevokingFx(db), { authorisationTtlMs: 300_000 }, () => new Date('2026-10-17T12:00:00Z')),

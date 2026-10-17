@@ -1,4 +1,4 @@
-import type { WithdrawalRecord } from '../domain/types.js';
+import type { FxQuote, WithdrawalRecord } from '../domain/types.js';
 
 export interface AuthenticationStore {
   authenticateToken(token: string): string | null;
@@ -19,4 +19,8 @@ export interface WithdrawalStore {
    * reserves available funds, and persists the withdrawal authorisation.
    */
   commitAuthorisation(record: WithdrawalRecord): { record: WithdrawalRecord; replayed: boolean };
+}
+
+export interface ExchangeRateProvider {
+  getQuote(from: string, to: string): Promise<FxQuote>;
 }

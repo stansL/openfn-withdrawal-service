@@ -1,9 +1,8 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto';
-import type { WithdrawalStore } from './ports.js';
+import type { ExchangeRateProvider, WithdrawalStore } from './ports.js';
 import { AccountNotFoundError, IdempotencyConflictError, InsufficientFundsError } from '../domain/errors.js';
-import { canonicalAmount, currencyMinorUnits, formatUsdCents, multiplyDecimalByCents } from '../domain/money.js';
+import { canonicalAmount, currencyMinorUnits, multiplyDecimalByCents } from '../domain/money.js';
 import type { Principal, WithdrawalRecord } from '../domain/types.js';
-import type { ExchangeRateProvider } from '../fx/exchange-rate.js';
 
 export interface AuthoriseWithdrawalCommand {
   accountId: string;
@@ -98,19 +97,4 @@ function generateAuthorisationCode(): string {
   let code = '';
   for (let i = 0; i < 16; i++) code += alphabet[randomInt(0, alphabet.length)];
   return `${code.slice(0, 4)}-${code.slice(4, 8)}-${code.slice(8, 12)}-${code.slice(12, 16)}`;
-}
-
-export function toApiResponse(record: WithdrawalRecord) {
-  return {
-    id: record.id,
-    account_id: record.accountId,
-    status: record.status,
-    authorisation_code: record.authorisationCode,
-    amount_usd: formatUsdCents(record.amountUsdCents),
-    target_currency: record.targetCurrency,
-    converted_amount: record.convertedAmount,
-    exchange_rate: record.exchangeRate,
-    created_at: record.createdAt,
-    expires_at: record.expiresAt,
-  };
 }

@@ -1,9 +1,11 @@
 import { MIMEType } from 'node:util';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AuthService } from '../auth/auth-service.js';
-import { toApiResponse, type WithdrawalService } from '../application/withdrawal-service.js';
+import type { WithdrawalService } from '../application/withdrawal-service.js';
+import { toApiResponse } from './withdrawal-response.js';
 import { normalizeCurrency, parseUsdCents } from '../domain/money.js';
-import { PayloadTooLargeError, UnsupportedMediaTypeError, ValidationError } from '../domain/errors.js';
+import { ValidationError } from '../domain/errors.js';
+import { PayloadTooLargeError, UnsupportedMediaTypeError } from './errors.js';
 import type { Logger } from '../observability/logger.js';
 import { healthContract, readinessContract, withdrawalContract, validateWithdrawalBody, type RouteContract } from './contracts.js';
 

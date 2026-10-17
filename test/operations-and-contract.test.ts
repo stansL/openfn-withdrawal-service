@@ -1,3 +1,4 @@
+import { seedDemoData } from '../src/db/demo-seed.js';
 import test from 'node:test';
 import { request } from 'node:http';
 import assert from 'node:assert/strict';
@@ -5,9 +6,10 @@ import type { AddressInfo } from 'node:net';
 import { AppDatabase } from '../src/db/database.js';
 import { AuthService } from '../src/auth/auth-service.js';
 import { WithdrawalService } from '../src/application/withdrawal-service.js';
-import type { ExchangeRateProvider } from '../src/fx/exchange-rate.js';
+import type { ExchangeRateProvider } from '../src/application/ports.js';
 import type { FxQuote } from '../src/domain/types.js';
 import { createHttpServer } from '../src/http/app.js';
+import { FxPairUnsupportedError, FxUnavailableError } from '../src/domain/errors.js';
 import { createNodeSqliteTestDriver } from './support/node-sqlite-driver.js';
 
 class FakeFx implements ExchangeRateProvider {
@@ -18,7 +20,7 @@ class FakeFx implements ExchangeRateProvider {
 
 async function start(readiness = () => ({ ready: true, checks: { database: 'ok', lifecycle: 'accepting_traffic' } }), fx: ExchangeRateProvider = new FakeFx()) {
   const db = new AppDatabase(':memory:', createNodeSqliteTestDriver);
-  db.seedDemoData();
+  seedDemoData(db.db);
   const server = createHttpServer({
     auth: new AuthService(db),
     withdrawals: new WithdrawalService(db, fx),
@@ -275,6 +277,41 @@ test('unexpected failures return sanitized 500 envelopes and rejected credential
       await assertError(response, 401, 'unauthenticated');
     }
     const body = await assertError(await fetch(url, { method: 'POST', headers: jsonHeaders, body: validBody }), 500, 'internal_error');
+    assert.equal(body.error.message, 'An unexpected error occurred.');
+    assert.equal(app.db.getReservedBalance('acc_1001'), 0);
+  } finally { await app.close(); }
+});
+
+
+test('FX domain failures retain HTTP status, code, message and retry headers', async () => {
+  for (const [failure, status, code, retryAfter] of [
+    [new FxPairUnsupportedError(), 422, 'fx_pair_unsupported', null],
+    [new FxUnavailableError(), 503, 'fx_unavailable', '2'],
+  ] as const) {
+    const app = await start(undefined, { getQuote: async () => { throw failure; } });
+    try {
+      const response = await fetch(`${app.baseUrl}/v1/accounts/acc_1001/withdrawals`, {
+        method: 'POST', headers: jsonHeaders, body: validBody,
+      });
+      assert.equal(response.headers.get('retry-after'), retryAfter);
+      assert.equal(response.headers.get('www-authenticate'), null);
+      const body = await assertError(response, status, code);
+      assert.equal(body.error.message, failure.message);
+      assert.equal(app.db.getReservedBalance('acc_1001'), 0);
+    } finally { await app.close(); }
+  }
+});
+
+test('an unexpected error cannot spoof a recognized failure code or leak its details', async () => {
+  const app = await start(undefined, { getQuote: async () => {
+    throw { code: 'fx_unavailable', status: 503, message: 'private-detail', retryable: true };
+  } });
+  try {
+    const response = await fetch(`${app.baseUrl}/v1/accounts/acc_1001/withdrawals`, {
+      method: 'POST', headers: jsonHeaders, body: validBody,
+    });
+    assert.equal(response.headers.get('retry-after'), null);
+    const body = await assertError(response, 500, 'internal_error');
     assert.equal(body.error.message, 'An unexpected error occurred.');
     assert.equal(app.db.getReservedBalance('acc_1001'), 0);
   } finally { await app.close(); }
