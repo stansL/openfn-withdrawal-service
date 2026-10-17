@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.16.0 <23"
+    "node": ">=24.22.0 <25"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -20,7 +20,7 @@
     "better-sqlite3": "13.0.2"
   },
   "devDependencies": {
-    "@types/node": "22.15.30",
+    "@types/node": "24.19.2",
     "typescript": "5.8.3"
   }
 }

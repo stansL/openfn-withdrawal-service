@@ -46,3 +46,10 @@ This is a compact record of material review findings, not a transcript of every 
 - Shortened README while preserving Architecture before Workflow and both diagrams; moved detailed explanations and the AI process diagram into docs/SERVICE_GUIDE.md.
 - Git setup, packaging and commits remain deferred. The private commit plan stays outside the repository; no artificial timing or history changes are made.
 - Independent review (`quality_review`) found no correctness/security blockers and all nine invariants pass. Applied its test-robustness suggestion: 500 ms local HTTP timeout plus a fixture deadline/cleanup guard. Reviewer inspected source/tests/docs; verification was run by the implementing agent.
+
+## Node 24 migration — 2026-10-17
+
+- Expanded the action-runtime warning fix into an engineer-authorized application migration: Node 24.22.0 pin, Node 24 engine constraint and type definitions, public-registry lockfile metadata, README and v7 CI actions.
+- No application logic, schemas, money policy or dependencies used in production changed. Verification covers both SQLite drivers, JSON source-token parsing, HTTP cancellation and fresh startup; all nine domain invariants must remain intact.
+- Fresh public-registry `npm ci` on Node 24.22.0 reported zero vulnerabilities; all 48 tests ran with zero skips, typecheck and build passed, including the native SQLite adapter. Startup/explicit seed, readiness/docs, idempotent replay, access rejection, live Frankfurter conversion, persisted reservation checks and graceful shutdown passed with an isolated database.
+- Independent review (`node24_review`) found no correctness/security blockers and all nine invariants pass. Hosted Ubuntu CI confirmation remains pending commit/push approval. npm emitted an install-script approval notice for better-sqlite3; installation and native execution succeeded.

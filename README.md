@@ -4,7 +4,7 @@ A small Node.js + TypeScript service that authorises USD withdrawals and convert
 
 ## Quick start
 
-Requirements: Node **22.16.x** (see `.nvmrc`).
+Requirements: Node **24.22.0** (see `.nvmrc`).
 
 ```bash
 nvm use
