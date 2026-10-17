@@ -1,0 +1,26 @@
+{
+  "name": "openfn-withdrawal-service",
+  "version": "1.3.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.16.0 <23"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "npm run build && npm start",
+    "test": "tsc -p tsconfig.test.json && node --disable-warning=ExperimentalWarning --test dist-test/test/*.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify": "npm run typecheck && npm test && npm run build",
+    "seed": "npm run build && node dist/seed.js",
+    "setup": "npm ci && npm run build && npm run seed"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.30",
+    "typescript": "5.8.3"
+  }
+}
