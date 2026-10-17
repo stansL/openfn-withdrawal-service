@@ -1,0 +1,33 @@
+# Invariant-to-test map
+
+[AGENTS.md](../../AGENTS.md) owns the invariants. This map selects evidence; it does not replace reviewing the affected code or prove complete coverage. Test names below are exact names or clearly identified subsets. Run `npm run verify` for the full gate; see [the protocol](CHANGE_PROTOCOL.md).
+
+| Invariant | Existing executable evidence | Inspection / limits |
+|---|---|---|
+| Authorisation reserves funds without settling posted balance | `withdrawal-api.test.ts`: “authorises a valid withdrawal by reserving funds without settling the posted balance”; `production-adapter.test.ts`: reservation/idempotency test | Production test covers reservation, persisted expiry/replay and duplicate-code rollback. |
+| Active reservations never exceed posted balance | `withdrawal-api.test.ts`: “concurrent authorisations cannot over-reserve the same available funds”; “fast-fails insufficient available funds without calling FX” | In-process concurrent HTTP requests do not prove multi-process contention behavior; inspect DB constraints and conditional reservation. |
+| Reservation and authorisation persistence are atomic | `database-invariants.test.ts`: “rolls back the reservation if the withdrawal audit record cannot be persisted” | Forced insert failure exercises rollback with the test adapter; the production-adapter test now also forces a duplicate authorisation code and verifies rollback and absence of the failed operation. |
+| Authoritative account grant check occurs at reservation boundary | `withdrawal-api.test.ts`: “revalidates authorisation at the reservation boundary” | Revokes access during FX; inspect the transaction-bound grant query in `commitAuthorisation`. |
+| Same idempotency key/request creates no second reservation | `withdrawal-api.test.ts`: “replays the same successful operation without creating a second reservation”; “concurrent retries with the same idempotency key create one reservation”; `production-adapter.test.ts`: reservation/idempotency test | Inspect unique key constraint and request-hash validation; concurrent API test uses one process. Sequential replay advances the clock with a non-default TTL; both sequential and concurrent tests compare returned expiry to persistence. |
+| FX failure does not mutate account state | `withdrawal-api.test.ts`: “does not reserve funds when the FX dependency is unavailable” | Also covered by “FX failure with expired holds on multiple accounts performs no database writes”: verifies zero total_changes, unchanged holds/release markers and no failed-operation record. Read-only precheck discounts expiry; cleanup runs only in the commit transaction. |
+| External network calls do not run inside DB transactions | No dedicated transaction-lifetime test | Inspect `WithdrawalService.authorise`: await quote before `commitAuthorisation`; inspect synchronous transaction implementation. Revocation-during-FX test is supporting context, not proof of transaction lifetime. |
+| Inaccessible and nonexistent accounts have identical external 404 semantics | `withdrawal-api.test.ts`: “collapses inaccessible and nonexistent accounts to the same 404 to avoid account enumeration” | Inspect other response paths when access handling changes. |
+| Money calculations avoid binary floating point | `withdrawal-api.test.ts`: “rounds converted amounts deterministically to the target currency minor unit”; `fx-resilience.test.ts`: “preserves provider rate text from JSON numeric source” | Partial behavioral coverage; inspect integer-cent storage, safe-integer bounds and BigInt decimal conversion in `src/domain/money.ts`. `money.test.ts` now covers parsing/formatting limits, maximum conversion, invalid amounts and half-up ties/adjacent values at 0/2/3 minor units. |
+
+All test files above live in [`test/`](../../test/). The production-adapter test can skip if its native dependency cannot be imported; check the test output before claiming production persistence was exercised. Contract consumers are additionally covered by [`operations-and-contract.test.ts`](../../test/operations-and-contract.test.ts).
+
+Coverage gaps are recorded here for future scoped work; documenting a gap does not relax the corresponding invariant.
+
+## HTTP hardening evidence
+
+`test/operations-and-contract.test.ts` covers account-independent 405/Allow (including malformed account encoding on unsupported methods), unknown-route 404, media-type/charset rejection versus malformed JSON, authentication precedence, exact byte-limit acceptance, structured 413 rejection and incomplete chunked oversized uploads. It also checks sanitized 500s, invalid/revoked credentials and generated expiry/error contracts. `test/withdrawal-api.test.ts` checks persisted expiry and replay stability; the production-adapter test checks duplicate-code rollback deterministically.
+
+## Expiry cleanup evidence
+
+The engineer authorized resolving strict FX no-mutation through a read-only precheck and transaction-bound cleanup. `database-invariants.test.ts`: “availability projects expired funds without writes and failed persistence rolls cleanup back” checks mixed active/expired holds at the exact expiry boundary, no writes on accessible/inaccessible/missing reads, rollback of release markers and successful cleanup without double counting. The production-adapter test verifies the same read-only projection and cleanup rollback on the actual driver. API tests cover expired replay without writes and “concurrent authorisations competing for expired funds cannot over-reserve”.
+
+Cleanup retains its existing scope across expired accounts, but now only commits with a successful new authorisation. Read projections can discount expired holds while stored counters still include them; raw balance inspection helpers expose those stored counters. TTL now starts after FX and conversion; the post-FX timestamp also governs transaction cleanup. Multi-process contention and dedicated network/transaction-lifetime coverage remain separate gaps.
+
+## Dependency and timing boundaries
+
+`withdrawal-api.test.ts`: “slow FX does not consume authorisation TTL and cleanup uses the post-FX time” advances the injected clock beyond the TTL during FX, checks persisted post-FX creation/expiry, cleanup of an old hold and unchanged replay timestamps. `fx-resilience.test.ts` exercises Frankfurter against a local HTTP server: exact numeric-token preservation, pair paths, transient retry, non-retryable errors, malformed JSON/pair provenance, cancellation before headers and during a stalled body, and successful half-open recovery with only one probe. These are local HTTP contract tests, not a live Frankfurter availability check.
