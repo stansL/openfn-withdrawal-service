@@ -27,3 +27,14 @@ A clear engineer request authorizes a narrow implementation within that scope; a
 - [Reusable prompts](docs/ai/skills/): focused aids governed by the protocol.
 
 Do not commit, push, merge or deploy automatically. Stage only reviewed files after successful verification, then stop for explicit engineer approval.
+
+## Architecture and focused guidance
+
+Start with the [architecture map](docs/ai/ARCHITECTURE.md) for execution flow, state ownership and test boundaries. Load only the guidance relevant to the change:
+
+- [Money and persistence](docs/ai/skills/money-persistence.md)
+- [FX dependency](docs/ai/skills/fx-boundary.md)
+- [HTTP contracts](docs/ai/skills/http-contracts.md)
+- [Larger changes](docs/ai/skills/phased-planning.md)
+
+Use the [PR template](.github/pull_request_template.md) to hand over evidence. The existing verification, required review and human acceptance remain authoritative.

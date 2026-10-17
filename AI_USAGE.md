@@ -19,3 +19,9 @@ Concrete examples of AI-assisted review that changed this solution:
 The reusable instruction templates used for this workflow are in `docs/ai/skills/`. They are lightweight project skills/prompts, not a claim that an autonomous agent is trusted to merge or deploy code.
 
 [AGENTS.md](AGENTS.md) supplies repository-level agent instructions and domain invariants. These instructions guide behavior; they do not enforce permissions. The existing CI workflow runs verification, while required checks, human approvals and protected branches must be configured in the hosting service. No hosted protection is implied by this document.
+
+## Contributor tooling
+
+Start with the [architecture map](docs/ai/ARCHITECTURE.md) and focused guidance linked from [AGENTS.md](AGENTS.md). For larger work, use [phased planning](docs/ai/skills/phased-planning.md). The [PR template](.github/pull_request_template.md) records AI contribution, validation, review type and limitations.
+
+The contributor guidance is tool-neutral and requires no paid AI service or API key. Verification runs locally and through the existing CI workflow; review follows the change protocol.
