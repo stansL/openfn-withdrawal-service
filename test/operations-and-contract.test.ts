@@ -71,11 +71,40 @@ test('serves an OpenAPI document generated from the registered route contracts',
   }
 });
 
+test('root serves a public resource page without invoking application dependencies', async () => {
+  const server = createHttpServer({
+    auth: { authenticate: () => { throw new Error('Unexpected authentication'); } } as unknown as AuthService,
+    withdrawals: { authorise: () => { throw new Error('Unexpected withdrawal'); } } as unknown as WithdrawalService,
+    readiness: () => { throw new Error('Unexpected readiness probe'); },
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address() as AddressInfo;
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/`, { headers: { 'x-request-id': 'landing-request' } });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.equal(response.headers.get('x-request-id'), 'landing-request');
+    assert.equal(response.headers.get('content-security-policy'), "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
+    const html = await response.text();
+    assert.deepEqual([...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]), ['/docs', '/openapi.json', '/healthz', '/readyz']);
+    assert.match(html, /Authorisation reserves funds/);
+    assert.match(html, /posted balance stays unchanged/);
+    assert.doesNotMatch(html, /<script|<iframe|<form|https?:\/\//i);
+    assert.equal(Number(response.headers.get('content-length')), Buffer.byteLength(html));
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test('serves Swagger UI pointing at the generated OpenAPI document', async () => {
   const app = await start();
   try {
     const response = await fetch(`${app.baseUrl}/docs`);
     assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-security-policy') ?? '', /script-src 'unsafe-inline' https:\/\/unpkg.com/);
     const html = await response.text();
     assert.match(html, /swagger-ui/i);
     assert.match(html, /\/openapi\.json/);
@@ -179,7 +208,7 @@ test('known paths return 405 with Allow independently of account existence; unkn
       assert.equal(response.headers.get('allow'), 'POST');
       await assertError(response, 405, 'method_not_allowed');
     }
-    for (const path of ['/healthz', '/readyz', '/docs', '/openapi.json']) {
+    for (const path of ['/', '/healthz', '/readyz', '/docs', '/openapi.json']) {
       const response = await fetch(`${app.baseUrl}${path}`, { method: 'POST', headers: jsonHeaders });
       assert.equal(response.headers.get('allow'), 'GET');
       await assertError(response, 405, 'method_not_allowed');

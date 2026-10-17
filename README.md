@@ -14,11 +14,13 @@ npm run seed
 npm start
 ```
 
-Server: `http://localhost:3000`
+Service landing page: `http://localhost:3000` — links to API documentation, the OpenAPI specification, liveness and readiness checks.
 
 Interactive API documentation: `http://localhost:3000/docs`
 
 OpenAPI document: `http://localhost:3000/openapi.json`
+
+For local development, use `npm run dev` instead of `npm start`. It watches `src/`, the TypeScript configuration and the development launcher, then rebuilds and restarts the server automatically. A failed build waits for the next edit without serving stale output. Refresh your browser after a successful restart to see page changes. Stop the server with Ctrl+C.
 
 Run all verification:
 

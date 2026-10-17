@@ -97,6 +97,7 @@ For this exercise, converted amounts use **half-up rounding to the target curren
 
 The HTTP route contracts are the source for both routing/validation metadata and OpenAPI generation. This avoids keeping a separate handwritten API document that can silently drift from runtime behavior.
 
+- `/` - static service landing page with links to documentation and operational checks; loading it does not probe dependencies
 - `/docs` - Swagger UI
 - `/openapi.json` - OpenAPI 3.0 document
 - `/healthz` - process liveness

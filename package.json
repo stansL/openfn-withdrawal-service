@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "dev": "npm run build && npm start",
+    "dev": "node --watch --watch-path=src --watch-path=tsconfig.json --watch-path=scripts/dev.mjs scripts/dev.mjs",
     "test": "tsc -p tsconfig.test.json && node --disable-warning=ExperimentalWarning --test dist-test/test/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify": "npm run typecheck && npm test && npm run build",

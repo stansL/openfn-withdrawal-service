@@ -6,6 +6,7 @@ import { MethodNotAllowedError, toHttpError } from './errors.js';
 import { noopLogger, type Logger } from '../observability/logger.js';
 import { buildOpenApiDocument } from './contracts.js';
 import { createRoutes, header, type ReadinessStatus } from './routes.js';
+import { landingPageHtml, landingPagePolicy } from './landing-page.js';
 
 export interface AppDependencies {
   auth: AuthService;
@@ -40,8 +41,9 @@ export function createHttpServer(deps: AppDependencies) {
     });
 
     try {
-      if (pathname === '/openapi.json' || pathname === '/docs') {
+      if (pathname === '/' || pathname === '/openapi.json' || pathname === '/docs') {
         if (req.method !== 'GET') throw new MethodNotAllowedError(['GET']);
+        if (pathname === '/') return html(res, 200, landingPageHtml(), landingPagePolicy);
         return pathname === '/openapi.json' ? json(res, 200, openApiDocument) : html(res, 200, swaggerHtml());
       }
 
@@ -109,13 +111,13 @@ function json(res: ServerResponse, status: number, payload: unknown): void {
   res.end(body);
 }
 
-function html(res: ServerResponse, status: number, body: string): void {
+function html(res: ServerResponse, status: number, body: string, policy?: string): void {
   res.statusCode = status;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Content-Length', Buffer.byteLength(body));
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'none'; style-src 'unsafe-inline' https://unpkg.com; script-src 'unsafe-inline' https://unpkg.com; connect-src 'self'; img-src 'self' data: https://validator.swagger.io",
+    policy ?? "default-src 'none'; style-src 'unsafe-inline' https://unpkg.com; script-src 'unsafe-inline' https://unpkg.com; connect-src 'self'; img-src 'self' data: https://validator.swagger.io",
   );
   res.end(body);
 }
