@@ -12,6 +12,8 @@
     "dev": "node --watch --watch-path=src --watch-path=tsconfig.json --watch-path=scripts/dev.mjs scripts/dev.mjs",
     "test": "tsc -p tsconfig.test.json && node --disable-warning=ExperimentalWarning --test dist-test/test/*.test.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "security:dependencies": "npm audit --audit-level=high --include=dev --registry=https://registry.npmjs.org",
+    "security:code": "semgrep scan --config .security/semgrep --error --strict --metrics=off --disable-version-check --disable-nosem --no-rewrite-rule-ids src scripts",
     "verify": "npm run typecheck && npm test && npm run build",
     "seed": "npm run build && node dist/seed.js",
     "setup": "npm ci && npm run build && npm run seed"

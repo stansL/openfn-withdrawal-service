@@ -10,6 +10,11 @@
 
 <!-- Exact commands, outcomes, skipped tests and manual checks still pending. -->
 
+## Security review
+
+- Dependency, static-analysis and secret checks:
+- New findings, accepted exceptions (owner/expiry), or threat changes:
+
 ## AI assistance and review
 
 - AI tools and their contribution (or none):

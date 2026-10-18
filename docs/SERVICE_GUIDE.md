@@ -134,6 +134,8 @@ The service includes:
 
 Tests target business and failure risks rather than a coverage percentage.
 
+Separate security jobs audit dependencies, scan JavaScript/TypeScript code and scan Git history for secrets on PRs, pushes to `main` and a weekly schedule. See [SECURITY.md](../SECURITY.md) for local commands, triage ownership, expiring fixture exceptions and the current hosted-enforcement status.
+
 They cover, among other cases:
 
 - valid authorisation reserves funds without changing posted balance;

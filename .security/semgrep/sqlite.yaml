@@ -1,0 +1,14 @@
+rules:
+  - id: sqlite-interpolated-sql
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: SQL text interpolates a value. Use a constant query with bound parameters.
+    metadata:
+      category: security
+      cwe: 'CWE-89: SQL Injection'
+      technology: [better-sqlite3]
+    pattern-either:
+      - pattern: $DB.prepare(`...${$VALUE}...`, ...)
+      - pattern: $DB.exec(`...${$VALUE}...`, ...)
+      - pattern: $DB.prepare($LEFT + $RIGHT, ...)
+      - pattern: $DB.exec($LEFT + $RIGHT, ...)

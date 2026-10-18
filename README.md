@@ -163,6 +163,7 @@ Authorisation codes are cryptographically random server-side references, not ind
 
 - [Service guide](docs/SERVICE_GUIDE.md): security, HTTP errors, resilience, configuration, test strategy and deliberate omissions.
 - [Engineering decisions](DECISIONS.md): rationale and production evolution.
+- [Security policy](SECURITY.md): automated scans, local checks, finding ownership and hosting enforcement limits.
 - [AI usage](AI_USAGE.md): tools, material review findings and human control.
 - [Agent instructions](AGENTS.md) and [change protocol](docs/ai/CHANGE_PROTOCOL.md): impact analysis, verification, review and human approval.
 

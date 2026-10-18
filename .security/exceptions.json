@@ -1,0 +1,20 @@
+[
+  {
+    "fingerprint": "7989d31103ee7bbd3731b914402e01f09688782b:README.md:curl-auth-header:34",
+    "owner": "@stansL",
+    "expires": "2027-01-18",
+    "reason": "Historical README curl example uses the explicitly public demo-alice-token fixture, not a production credential. Exact finding only."
+  },
+  {
+    "fingerprint": "48ef58bb51a5a8e97db4279836c4ff2b695645ee:test/withdrawal-api.test.ts:generic-api-key:233",
+    "owner": "@stansL",
+    "expires": "2027-01-18",
+    "reason": "Historical concurrency test uses the public demo-alice-token fixture and a deterministic idempotency key. Exact finding only."
+  },
+  {
+    "fingerprint": "48ef58bb51a5a8e97db4279836c4ff2b695645ee:test/withdrawal-api.test.ts:generic-api-key:234",
+    "owner": "@stansL",
+    "expires": "2027-01-18",
+    "reason": "Second concurrent request intentionally repeats the same demo token/idempotency key to verify a single reservation. Exact finding only."
+  }
+]
